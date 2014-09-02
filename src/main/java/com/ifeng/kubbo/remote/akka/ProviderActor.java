@@ -10,7 +10,12 @@ import akka.contrib.pattern.DistributedPubSubMediator;
 import akka.event.Logging;
 import akka.event.LoggingAdapter;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Set;
+
+import static com.ifeng.kubbo.remote.akka.Constants.CONSUMER_ACTOR_PATH;
+import static com.ifeng.kubbo.remote.akka.Constants.CONSUMER_ROLE;
 
 /**
  * <title>AkkaServicePushlisher</title>
@@ -27,10 +32,9 @@ public class ProviderActor extends UntypedActor{
     private LoggingAdapter logger = Logging.getLogger(getContext().system(), this);
     private TypedActorExtension typed = TypedActor.get(getContext().system());
     private Set<ProviderConfig> providerPublished;
+    private Map<ProviderConfig,Object> proxyMap = new HashMap<>();
 
-    private static final String SYSTEM = "kubbo";
-    private static final String ROLE = "provider";
-    private static final String CONSUMER = "/user/consumer";
+
     private ProviderActor(Set<ProviderConfig> providerPublished) {
         this.providerPublished = providerPublished;
     }
@@ -68,6 +72,9 @@ public class ProviderActor extends UntypedActor{
         }else if(message instanceof Protocol.Register) {
             Protocol.Register registerMsg = (Protocol.Register) message;
             publishProvider(registerMsg.getProviderConfigs());
+        }else if(message instanceof Protocol.UnRegister){
+            Protocol.UnRegister unRegisterMsg = (Protocol.UnRegister) message;
+            removeProvider(unRegisterMsg.getProviderConfigs());
         }else{
             logger.warning("UnKnown message {}",message);
             unhandled(message);
@@ -76,7 +83,7 @@ public class ProviderActor extends UntypedActor{
 
     private void registerConsumer(Member member) {
         logger.info("sender register consumer command to {}", member.address());
-        getContext().actorSelection(member.address() + CONSUMER).tell(new Protocol.Register(providerPublished), getSelf());
+        getContext().actorSelection(member.address() + CONSUMER_ACTOR_PATH).tell(new Protocol.Register(providerPublished), getSelf());
     }
 
 
@@ -90,26 +97,60 @@ public class ProviderActor extends UntypedActor{
 //        }
 
         if (!providerConfigs.isEmpty()) {
-            providerConfigs.forEach(this::registerProvider);
-            mediator.tell(new DistributedPubSubMediator.SendToAll(CONSUMER, new Protocol.Register(providerConfigs)), getSelf());
-
+            providerConfigs.forEach(p-> {
+                if (!registerProvider(p)) {
+                    providerConfigs.remove(p);
+                }
+            });
+            if (providerConfigs.size() > 0) {
+                mediator.tell(new DistributedPubSubMediator.SendToAll(CONSUMER_ACTOR_PATH, new Protocol.Register(providerConfigs)), getSelf());
+            }
+            logger.info("sendToAll consumer newProvider {}",providerConfigs);
         }
 
+    }
+
+
+    public void removeProvider(Set<ProviderConfig> providerConfigs){
+        providerConfigs.retainAll(providerPublished);
+        if(logger.isDebugEnabled()){
+            logger.debug("remove providers {}",providerConfigs);
+        }
+
+        if(!providerConfigs.isEmpty()){
+            providerPublished.removeAll(providerConfigs);
+            for(ProviderConfig providerConfig : providerConfigs){
+                Object proxy = proxyMap.get(providerConfig);
+                if(proxy == null){
+                    logger.warning("provider proxy is missing|provider={}",providerConfig);
+                    break;
+                }
+                if(typed.stop(proxy)){
+                    logger.info("provider is stopped|provider={}",providerConfig);
+                }else{
+                    logger.warning("provider stopped failure|provider={}", providerConfig);
+                }
+
+            }
+            mediator.tell(new DistributedPubSubMediator.SendToAll(CONSUMER_ACTOR_PATH,new Protocol.UnRegister(providerConfigs)),getSelf());
+        }
     }
 
     private boolean isAliveConsumer(Member member) {
-        return member.hasRole("consumer") && member.status() == MemberStatus.up();
+        return member.hasRole(CONSUMER_ROLE) && (member.status() == MemberStatus.up());
     }
 
 
-    private void registerProvider(ProviderConfig providerConfig) {
+    private boolean registerProvider(ProviderConfig providerConfig) {
         try {
             Object proxy = typed.typedActorOf(new TypedProps(providerConfig.getClazz(), () -> providerConfig.getImplement()), providerConfig.toPath());
+            proxyMap.put(providerConfig,proxy);
             logger.info("register provider {} success", proxy);
+            return true;
         } catch (Exception e) {
-            logger.error("register provider error", e);
+            logger.error("register provider {} error:{}",providerConfig.toPath(),e.getMessage());
         }
-
+        return false;
 
     }
     public static Props props(Set<ProviderConfig>servicePublished) {

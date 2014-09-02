@@ -1,7 +1,6 @@
 package com.ifeng.kubbo.remote.akka;
 
 import java.io.Serializable;
-import java.util.List;
 import java.util.Set;
 
 /**
@@ -23,6 +22,18 @@ public class Protocol {
         }
 
         public Set<ProviderConfig> getProviderConfigs() {
+            return this.providerConfigs;
+        }
+    }
+
+    public static class UnRegister implements Serializable{
+        private Set<ProviderConfig> providerConfigs;
+
+        public UnRegister(Set<ProviderConfig> providerConfigs){
+            this.providerConfigs = providerConfigs;
+        }
+
+        public Set<ProviderConfig> getProviderConfigs(){
             return this.providerConfigs;
         }
     }
