@@ -1,9 +1,9 @@
 package com.ifeng.kubbo.remote.akka;
 
-import akka.actor.*;
-import akka.routing.ActorSelectionRoutee;
+import akka.actor.ActorSystem;
+import akka.actor.TypedActor;
+import akka.actor.TypedActorExtension;
 import akka.routing.RoundRobinGroup;
-import akka.routing.Router;
 import com.typesafe.config.ConfigFactory;
 
 import java.util.Set;
@@ -48,9 +48,10 @@ public  class ReferenceInbox {
         }
         RoundRobinGroup roundRobinGroup = new RoundRobinGroup(path);
 //        ActorRef router = system.actorOf(roundRobinGroup.props());
-        Router router = roundRobinGroup.createRouter(system);
-        router.removeRoutee(new ActorSelectionRoutee(system.actorSelection(path.)))
-        return (T) typed.typedActorOf(new TypedProps<>(clazz), router);
+//        Router router = roundRobinGroup.createRouter(system);
+//        router.removeRoutee(new ActorSelectionRoutee(system.actorSelection(path.)))
+//        return (T) typed.typedActorOf(new TypedProps<>(clazz), router);
+        return null;
     }
 
 

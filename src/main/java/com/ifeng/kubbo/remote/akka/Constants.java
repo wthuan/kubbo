@@ -10,6 +10,9 @@ package com.ifeng.kubbo.remote.akka;
  */
 public abstract class Constants {
 
+
+    public static final int CPU_CORE = Runtime.getRuntime().availableProcessors();
+
     public static final String SYSTEM = "kubbo";
 
 
@@ -30,6 +33,7 @@ public abstract class Constants {
     public static final String CONSUMER_ACTOR_PATH = "/user/consumer";
 
 
+    public static final int TYPED_ACTOR_NUM = CPU_CORE;
 
 
 }
