@@ -1,6 +1,8 @@
 package com.ifeng.kubbo.remote.akka;
 
-import akka.actor.*;
+import akka.actor.ActorSystem;
+import akka.actor.TypedActor;
+import akka.actor.TypedActorExtension;
 import akka.routing.RoundRobinGroup;
 import com.typesafe.config.ConfigFactory;
 
@@ -45,10 +47,11 @@ public  class ReferenceInbox {
             throw new IllegalArgumentException("Not found provider " + clazz.getCanonicalName());
         }
         RoundRobinGroup roundRobinGroup = new RoundRobinGroup(path);
-        ActorRef router = system.actorOf(roundRobinGroup.props());
+//        ActorRef router = system.actorOf(roundRobinGroup.props());
 //        Router router = roundRobinGroup.createRouter(system);
-//        router.removeRoutee(new ActorSelectionRoutee(system.actorSelection(path)))
-        return (T) typed.typedActorOf(new TypedProps<>(clazz), router);
+//        router.removeRoutee(new ActorSelectionRoutee(system.actorSelection(path.)))
+//        return (T) typed.typedActorOf(new TypedProps<>(clazz), router);
+        return null;
     }
 
 
