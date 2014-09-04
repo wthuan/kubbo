@@ -4,7 +4,8 @@ import akka.actor.*;
 import akka.event.Logging;
 import akka.event.LoggingAdapter;
 import akka.routing.*;
-import com.ifeng.kubbo.remote.ProviderFactory;
+import com.google.common.collect.Lists;
+import com.ifeng.kubbo.remote.ProviderLifeCycle;
 import org.apache.commons.lang3.reflect.TypeUtils;
 
 import java.util.ArrayList;
@@ -24,7 +25,7 @@ import static com.ifeng.kubbo.remote.akka.Constants.TYPED_ACTOR_NUM;
  * @author zhuwei
  *         14-9-4
  */
-public class TypedActorProviderFactory implements ProviderFactory {
+public class ProviderContainer implements ProviderLifeCycle {
 
 
 
@@ -38,16 +39,17 @@ public class TypedActorProviderFactory implements ProviderFactory {
 
     private final ConcurrentMap<ProviderConfig, ProviderMetadata> metadatas = new ConcurrentHashMap<>();
 
+    private ActorRef providerListener;
 
-
-
-    public TypedActorProviderFactory(ActorSystem system, int typedActorNum) {
+    public ProviderContainer(ActorSystem system, int typedActorNum) {
         Objects.requireNonNull(system, "actorSystem required non null");
 
         this.system = system;
         this.typed = TypedActor.get(system);
         this.typedActorNum = typedActorNum > 0 ? typedActorNum : TYPED_ACTOR_NUM;
         this.logger = Logging.getLogger(system, this);
+
+        this.providerListener = system.actorOf(ProviderListenerActor.props(this));
     }
 
 
@@ -61,7 +63,7 @@ public class TypedActorProviderFactory implements ProviderFactory {
      * @return
      */
     @Override
-    public <T> T create(Class<T> clazz, T implement, String group, String version) {
+    public <T> T start(Class<T> clazz, T implement, String group, String version) {
 
         //param check
         Objects.requireNonNull(clazz, "clazz required non null");
@@ -77,13 +79,13 @@ public class TypedActorProviderFactory implements ProviderFactory {
         ProviderMetadata metadata = metadatas.get(config);
         if (metadatas.containsKey(config)) {
             if (logger.isInfoEnabled()) {
-                logger.info("provider already create|path={}", config.toPath());
+                logger.info("provider already start|path={}", config.toPath());
             }
             return (T) metadata.getRouterProxy();
         }
 
 
-        //actual create
+        //actual start
         List<T> proxyList = new ArrayList<>(typedActorNum);
         List<ActorRef> actorRefList = new ArrayList<>(typedActorNum);
         List<String> routeePaths = new ArrayList<>(typedActorNum);
@@ -98,13 +100,39 @@ public class TypedActorProviderFactory implements ProviderFactory {
         RoundRobinGroup roundRobinGroup = new RoundRobinGroup(routeePaths);
         ActorRef router = system.actorOf(roundRobinGroup.props(), config.toPath());
         T routerProxy = typed.typedActorOf(new TypedProps<>(clazz), router);
-        logger.info("create provider success|path={}", config);
         metadata = new ProviderMetadata<>(config, proxyList, actorRefList, router, routerProxy);
         metadatas.putIfAbsent(config, metadata);
+        providerListener.tell(Protocol.SHAKE_HANDS_ALL,router);
+        logger.info("start provider success|path={}", config);
         return routerProxy;
     }
 
+    @Override
+    public void stop(Class<?> clazz, String group, String version) {
+        ProviderConfig config = new ProviderConfig(clazz,null,group,version);
+        ProviderMetadata metadata = check(config);
 
+        //stop router
+        system.stop(metadata.getRouter());
+        typed.stop(metadata.getRouterProxy());
+
+        //stop actoref
+        List<ActorRef> refs = metadata.getActorRefList();
+        refs.forEach(r->{r.tell(PoisonPill.getInstance(),null);});
+
+        //stop proxy
+        List<Object> proxys = metadata.getProxyList();
+        proxys.forEach(typed::stop);
+
+        //stop increased
+        List<Routee> routees = metadata.getIncresedActors();
+        for(Routee r : routees){
+            r.send(PoisonPill.getInstance(),null);
+        }
+    }
+
+
+    @Override
     public <T> T increaseActor(Class<T> clazz,String group,String version) {
         ProviderConfig config = new ProviderConfig(clazz, null, group, version);
         ProviderMetadata metadata = check(config);
@@ -122,9 +150,8 @@ public class TypedActorProviderFactory implements ProviderFactory {
 
     }
 
-
-
-    public <T> T decreaseActor(Class<?> clazz, String group, String version) {
+    @Override
+    public <T> T decreaseActor(Class<T> clazz, String group, String version) {
         ProviderConfig config = new ProviderConfig(clazz, null, group, version);
         ProviderMetadata metadata = check(config);
         if (metadata.getIncresedActors().size() == 0) {
@@ -133,9 +160,20 @@ public class TypedActorProviderFactory implements ProviderFactory {
         }
         Routee removed = (Routee)metadata.getIncresedActors().remove(ThreadLocalRandom.current().nextInt(metadata.getIncresedActors().size()));
         metadata.getRouter().tell(new RemoveRoutee(removed),null);
+        logger.info("decrease actor success|path={}",config.toPath());
         return (T) metadata.getRouterProxy();
 
 
+    }
+
+    @Override
+    public List<ActorRef> list() {
+        List<ActorRef> refs = Lists.newArrayList();
+        for (ProviderMetadata metadata : metadatas.values()) {
+            refs.add(metadata.getRouter());
+        }
+
+        return refs;
     }
 
 

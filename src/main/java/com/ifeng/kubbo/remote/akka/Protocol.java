@@ -1,8 +1,5 @@
 package com.ifeng.kubbo.remote.akka;
 
-import java.io.Serializable;
-import java.util.Set;
-
 /**
  * <title>Protocol</title>
  * <p></p>
@@ -13,28 +10,9 @@ import java.util.Set;
  */
 public class Protocol {
 
-    public static class Register implements Serializable {
 
-        private Set<ProviderConfig> providerConfigs;
 
-        public Register(Set<ProviderConfig> providerConfigs) {
-            this.providerConfigs = providerConfigs;
-        }
+    public static final String SHAKE_HANDS_ALL = "shake-hands-all";
 
-        public Set<ProviderConfig> getProviderConfigs() {
-            return this.providerConfigs;
-        }
-    }
 
-    public static class UnRegister implements Serializable{
-        private Set<ProviderConfig> providerConfigs;
-
-        public UnRegister(Set<ProviderConfig> providerConfigs){
-            this.providerConfigs = providerConfigs;
-        }
-
-        public Set<ProviderConfig> getProviderConfigs(){
-            return this.providerConfigs;
-        }
-    }
 }
