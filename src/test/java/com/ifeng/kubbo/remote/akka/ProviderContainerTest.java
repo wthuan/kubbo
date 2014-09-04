@@ -19,21 +19,21 @@ import java.util.concurrent.CountDownLatch;
  * @author zhuwei
  *         14-9-4
  */
-public class TypedActorProviderFactoryTest extends TestCase{
+public class ProviderContainerTest extends TestCase{
 
     private int callNum = 100;
 
     private ActorSystem system;
-    private TypedActorProviderFactory factory;
+    private ProviderContainer factory;
     @Override
     protected void setUp() throws Exception {
         this.system = ActorSystem.create();
-        this.factory = new TypedActorProviderFactory(system,4);
+        this.factory = new ProviderContainer(system,4);
     }
 
     @Test
     public void testCreate() throws Exception {
-        TestService testService = factory.create(TestService.class, new TestServiceImpl(), null, null);
+        TestService testService = factory.start(TestService.class, new TestServiceImpl(), null, null);
         final CountDownLatch countDownLatch = new CountDownLatch(callNum);
 
         for (int i = 0; i < callNum; i++) {
@@ -51,11 +51,13 @@ public class TypedActorProviderFactoryTest extends TestCase{
 
     @Test
     public void testIncreaseActor() throws Exception {
-        TestService testService = this.factory.create(TestService.class, new TestServiceImpl(), null, null);
-        this.factory.increaseActor(TestService.class, null, null);
-        this.factory.increaseActor(TestService.class, null, null);
-        this.factory.increaseActor(TestService.class, null, null);
-        this.factory.increaseActor(TestService.class, null, null);
+        TestService testService = this.factory.start(TestService.class, new TestServiceImpl(), null, null);
+      this.factory.increaseActor(TestService.class,null,null);
+      this.factory.increaseActor(TestService.class,null,null);
+      this.factory.increaseActor(TestService.class,null,null);
+      this.factory.increaseActor(TestService.class,null,null);
+        this.factory.decreaseActor(TestService.class, null, null);
+        this.factory.decreaseActor(TestService.class,null,null);
 
         final CountDownLatch countDownLatch = new CountDownLatch(callNum);
 
@@ -76,7 +78,7 @@ public class TypedActorProviderFactoryTest extends TestCase{
 
     @Test
     public void testDecreaseActor() throws Exception {
-        TestService testService = this.factory.create(TestService.class, new TestServiceImpl(), null, null);
+        TestService testService = this.factory.start(TestService.class, new TestServiceImpl(), null, null);
         this.factory.decreaseActor(TestService.class, null, null);
         this.factory.decreaseActor(TestService.class, null, null);
         this.factory.decreaseActor(TestService.class, null, null);

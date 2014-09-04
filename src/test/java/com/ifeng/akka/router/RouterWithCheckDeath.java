@@ -2,9 +2,7 @@ package com.ifeng.akka.router;
 
 import akka.actor.*;
 import akka.japi.Creator;
-import akka.remote.routing.RemoteRouterConfig;
 import akka.routing.RoundRobinGroup;
-import akka.routing.RoundRobinPool;
 import com.google.common.collect.Lists;
 import com.typesafe.config.ConfigFactory;
 
@@ -65,9 +63,9 @@ public class RouterWithCheckDeath {
         System.out.println("start actor 3");
 
         List<String> list = Lists.newArrayList("akka.tcp://kubbo@127.0.0.1:1111/user/test1","akka.tcp://kubbo@127.0.0.1:2222/user/test2","akka.tcp://kubbo@127.0.0.1:3333/user/test3");
-//        RoundRobinGroup roundRobinGroup = new RoundRobinGroup(list);
-//        ActorRef router = system.actorOf(roundRobinGroup.props());
-        system.actorOf(new RemoteRouterConfig(new RoundRobinPool(list.size()),new Address[]{new Address("akka.tcp","kubbo","127.0.0.1",1111)}).props())
+        RoundRobinGroup roundRobinGroup = new RoundRobinGroup(list);
+        ActorRef router = system.actorOf(roundRobinGroup.props());
+//        system.actorOf(new RemoteRouterConfig(new RoundRobinPool(list.size()),new Address[]{new Address("akka.tcp","kubbo","127.0.0.1",1111)}).props());
         Test test = typed.typedActorOf(new TypedProps<Test>(Test.class),router);
         int i = 0;
         for(;;){
