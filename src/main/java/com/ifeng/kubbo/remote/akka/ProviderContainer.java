@@ -14,6 +14,7 @@ import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.stream.Collectors;
 
 import static com.ifeng.kubbo.remote.akka.Constants.TYPED_ACTOR_NUM;
 
@@ -84,27 +85,34 @@ public class ProviderContainer implements ProviderLifeCycle {
             return (T) metadata.getRouterProxy();
         }
 
+        synchronized (clazz){
 
-        //actual start
-        List<T> proxyList = new ArrayList<>(typedActorNum);
-        List<ActorRef> actorRefList = new ArrayList<>(typedActorNum);
-        List<String> routeePaths = new ArrayList<>(typedActorNum);
-        List<Routee> routeeList = new ArrayList<>();
-        for (int i = 0; i < typedActorNum; i++) {
-            T proxy = typed.typedActorOf(new TypedProps<>(clazz, () -> implement));
-            ActorRef actorRef = typed.getActorRefFor(proxy);
-            proxyList.add(proxy);
-            actorRefList.add(actorRef);
-            routeePaths.add(actorRef.path().toStringWithoutAddress());
+            if(metadatas.containsKey(config)) {
+                return (T) metadata.getRouterProxy();
+            }
+            //actual start
+            List<T> proxyList = new ArrayList<>(typedActorNum);
+            List<ActorRef> actorRefList = new ArrayList<>(typedActorNum);
+            List<String> routeePaths = new ArrayList<>(typedActorNum);
+
+            for (int i = 0; i < typedActorNum; i++) {
+                T proxy = typed.typedActorOf(new TypedProps<>(clazz, () -> implement));
+                ActorRef actorRef = typed.getActorRefFor(proxy);
+                proxyList.add(proxy);
+                actorRefList.add(actorRef);
+                routeePaths.add(actorRef.path().toStringWithoutAddress());
+            }
+
+            RoundRobinGroup roundRobinGroup = new RoundRobinGroup(routeePaths);
+            //akka actor name is unique
+            ActorRef router = system.actorOf(roundRobinGroup.props(), config.toPath());
+            T routerProxy = typed.typedActorOf(new TypedProps<>(clazz), router);
+            metadata = new ProviderMetadata<>(config, Lists.newCopyOnWriteArrayList(proxyList), Lists.newCopyOnWriteArrayList(actorRefList), router, routerProxy);
+            metadatas.put(config, metadata);
+            providerListener.tell(Protocol.SHAKE_HANDS_ALL,router);
+            logger.info("start provider success|path={}", config);
+            return routerProxy;
         }
-        RoundRobinGroup roundRobinGroup = new RoundRobinGroup(routeePaths);
-        ActorRef router = system.actorOf(roundRobinGroup.props(), config.toPath());
-        T routerProxy = typed.typedActorOf(new TypedProps<>(clazz), router);
-        metadata = new ProviderMetadata<>(config, proxyList, actorRefList, router, routerProxy);
-        metadatas.putIfAbsent(config, metadata);
-        providerListener.tell(Protocol.SHAKE_HANDS_ALL,router);
-        logger.info("start provider success|path={}", config);
-        return routerProxy;
     }
 
     @Override
@@ -112,23 +120,9 @@ public class ProviderContainer implements ProviderLifeCycle {
         ProviderConfig config = new ProviderConfig(clazz,null,group,version);
         ProviderMetadata metadata = check(config);
 
-        //stop router
-        system.stop(metadata.getRouter());
-        typed.stop(metadata.getRouterProxy());
-
-        //stop actoref
-        List<ActorRef> refs = metadata.getActorRefList();
-        refs.forEach(r->{r.tell(PoisonPill.getInstance(),null);});
-
-        //stop proxy
-        List<Object> proxys = metadata.getProxyList();
-        proxys.forEach(typed::stop);
-
-        //stop increased
-        List<Routee> routees = metadata.getIncresedActors();
-        for(Routee r : routees){
-            r.send(PoisonPill.getInstance(),null);
-        }
+        metadata.getRouter().tell(new Broadcast(PoisonPill.getInstance()), null);
+        logger.info("stop provider success|path={}", config.toPath());
+        metadatas.remove(config);
     }
 
 
@@ -169,9 +163,7 @@ public class ProviderContainer implements ProviderLifeCycle {
     @Override
     public List<ActorRef> list() {
         List<ActorRef> refs = Lists.newArrayList();
-        for (ProviderMetadata metadata : metadatas.values()) {
-            refs.add(metadata.getRouter());
-        }
+        refs.addAll(metadatas.values().stream().map(ProviderMetadata::getRouter).collect(Collectors.toList()));
 
         return refs;
     }
@@ -195,7 +187,7 @@ public class ProviderContainer implements ProviderLifeCycle {
 
         private final ActorRef router;
         private final T routerProxy;
-        private final List<Routee> incresedActors = new ArrayList<>();
+        private final List<Routee> incresedActors = Lists.newCopyOnWriteArrayList();
         public ProviderMetadata(ProviderConfig config,
                                 List<T> proxyList,
                                 List<ActorRef> actorRefList,
