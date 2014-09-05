@@ -175,7 +175,7 @@ public class ActorThreadTest {
     public  static void routeTypedActor() throws InterruptedException {
         Object[] ret =  typedActor(1111, "test1");
         ActorSystem system = ActorSystem.create("kubbo");
-//        TypedActor.get(system).stop(test);
+//        TypedActor.getRef(system).stop(test);
         Test test = (Test) ret[0];
         ActorRef router = ((ActorRef) ret[1]);
         int i=0;

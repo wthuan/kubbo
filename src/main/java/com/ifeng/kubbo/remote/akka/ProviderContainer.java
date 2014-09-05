@@ -75,7 +75,7 @@ public class ProviderContainer implements ProviderLifeCycle {
 
         ProviderConfig config = new ProviderConfig(clazz, implement, group, version);
 
-        //get from cache
+        //getRef from cache
         ProviderMetadata metadata = metadatas.get(config);
         if (metadatas.containsKey(config)) {
             if (logger.isInfoEnabled()) {
