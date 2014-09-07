@@ -1,5 +1,7 @@
 package com.ifeng;
 
+import akka.actor.ActorRef;
+import akka.actor.TypedActor;
 import akka.dispatch.Futures;
 import scala.concurrent.Future;
 
@@ -11,7 +13,7 @@ import scala.concurrent.Future;
  * @author zhuwei
  *         14-9-4
  */
-public class TestServiceImpl implements TestService {
+public class TestServiceImpl implements TestService,TypedActor.Receiver {
 
     @Override
     public void testVoid(long sleep) throws Exception {
@@ -40,5 +42,10 @@ public class TestServiceImpl implements TestService {
 
         }
         return Futures.successful(1);
+    }
+
+    @Override
+    public void onReceive(Object message, ActorRef sender) {
+        System.out.println(message);
     }
 }

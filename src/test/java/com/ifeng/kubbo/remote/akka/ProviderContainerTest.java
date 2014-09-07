@@ -9,6 +9,8 @@ import org.junit.Test;
 import scala.concurrent.Future;
 
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 
 /**
@@ -96,6 +98,25 @@ public class ProviderContainerTest extends TestCase{
 
         countDownLatch.await();
 
+    }
+
+    @Test
+    public void testSyncCall()throws Exception {
+        TestService service = this.factory.start(TestService.class, new TestServiceImpl(), null, null);
+        ExecutorService executor = Executors.newFixedThreadPool(10);
+        CountDownLatch latch = new CountDownLatch(callNum);
+        for (int i = 0; i < callNum; i++) {
+            executor.execute(()-> {
+                try {
+                    service.testReturnInt(1000);
+                    latch.countDown();
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            });
+        }
+
+        latch.await();
 
     }
 
