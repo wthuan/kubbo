@@ -6,14 +6,7 @@ import org.apache.commons.lang3.StringUtils;
 import java.io.Serializable;
 import java.util.Objects;
 
-/**
- * <title>ServiceInfo</title>
- * <p></p>
- * Copyright © 2013 Phoenix New Media Limited All Rights Reserved.
- *
- * @author zhuwei
- *         14-9-1
- */
+
 public class ProviderConfig implements Serializable {
     private transient Class<?> clazz;
     private String klass;

@@ -10,14 +10,7 @@ import java.util.Map;
 import static com.ifeng.kubbo.remote.akka.Constants.CONSUMER_ROLE;
 import static com.ifeng.kubbo.remote.akka.Constants.SYSTEM;
 
-/**
- * <title>ReferenceInbox</title>
- * <p></p>
- * Copyright © 2013 Phoenix New Media Limited All Rights Reserved.
- *
- * @author zhuwei
- *         14-9-2
- */
+
 public  class ReferenceInbox implements Reference {
 
 

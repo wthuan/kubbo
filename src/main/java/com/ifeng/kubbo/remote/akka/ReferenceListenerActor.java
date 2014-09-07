@@ -16,14 +16,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
-/**
- * <title>ReferenceActor</title>
- * <p></p>
- * Copyright © 2013 Phoenix New Media Limited All Rights Reserved.
- *
- * @author zhuwei
- *         14-9-2
- */
+
 public class ReferenceListenerActor extends UntypedActor {
 
     private ActorRef mediator = DistributedPubSubExtension.get(getContext().system()).mediator();

@@ -15,14 +15,7 @@ import java.util.List;
 import static com.ifeng.kubbo.remote.akka.Constants.CONSUMER_ACTOR_PATH;
 import static com.ifeng.kubbo.remote.akka.Constants.CONSUMER_ROLE;
 
-/**
- * <title>AkkaServicePushlisher</title>
- * <p></p>
- * Copyright © 2013 Phoenix New Media Limited All Rights Reserved.
- *
- * @author zhuwei
- *         14-9-1
- */
+
 public class ProviderListenerActor extends UntypedActor{
 
     private Cluster cluster = Cluster.get(getContext().system());

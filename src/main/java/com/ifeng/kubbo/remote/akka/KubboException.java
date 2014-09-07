@@ -1,13 +1,6 @@
 package com.ifeng.kubbo.remote.akka;
 
-/**
- * <title>KubboException</title>
- * <p></p>
- * Copyright © 2013 Phoenix New Media Limited All Rights Reserved.
- *
- * @author zhuwei
- *         14-9-4
- */
+
 public class KubboException extends RuntimeException {
 
     public KubboException() {

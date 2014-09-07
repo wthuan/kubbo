@@ -1,13 +1,6 @@
 package com.ifeng.kubbo.remote;
 
-/**
- * <title>Reference</title>
- * <p></p>
- * Copyright © 2013 Phoenix New Media Limited All Rights Reserved.
- *
- * @author zhuwei
- *         14-9-5
- */
+
 public interface Reference {
 
 

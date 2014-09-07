@@ -18,14 +18,7 @@ import java.util.stream.Collectors;
 
 import static com.ifeng.kubbo.remote.akka.Constants.TYPED_ACTOR_NUM;
 
-/**
- * <title>TypedActorProviderCreator</title>
- * <p></p>
- * Copyright © 2013 Phoenix New Media Limited All Rights Reserved.
- *
- * @author zhuwei
- *         14-9-4
- */
+
 public class ProviderContainer implements ProviderLifeCycle {
 
 
