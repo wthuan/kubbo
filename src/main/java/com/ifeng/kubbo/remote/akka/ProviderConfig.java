@@ -9,7 +9,7 @@ import java.util.Objects;
 
 public class ProviderConfig implements Serializable {
     private transient Class<?> clazz;
-    private String klass;
+    private String className;
     private String group;
     private String version;
     private transient Object implement;
@@ -17,7 +17,7 @@ public class ProviderConfig implements Serializable {
         Objects.requireNonNull(clazz, "provider clazz required non null");
 
         this.clazz = clazz;
-        this.klass = clazz.getCanonicalName();
+        this.className = clazz.getCanonicalName();
         this.group = StringUtils.defaultIfBlank(group,"default");
         this.version = StringUtils.defaultIfBlank(version,"default");
         this.implement = implement;
@@ -27,12 +27,8 @@ public class ProviderConfig implements Serializable {
         this(clazz,null,group,version);
     }
 
-    public Class<?> getClazz() {
-        return clazz;
-    }
-
-    public String getKlass() {
-        return klass;
+    public String getClassName() {
+        return className;
     }
 
     public String getGroup() {
@@ -43,15 +39,24 @@ public class ProviderConfig implements Serializable {
         return version;
     }
 
+    public Class<?> getClazz() {
+        return clazz;
+    }
+
     public Object getImplement() {
         return implement;
     }
 
     public String toPath() {
         StringBuilder sb = new StringBuilder();
-        sb.append(klass);
+        sb.append(className);
         return sb.toString();
     }
+
+    public String toAkkaPath(){
+        return "/user/"+toPath();
+    }
+
 
 
     @Override
@@ -62,15 +67,16 @@ public class ProviderConfig implements Serializable {
         ProviderConfig that = (ProviderConfig) o;
 
         if (!group.equals(that.group)) return false;
-        if (!klass.equals(that.klass)) return false;
         if (!version.equals(that.version)) return false;
+        if (!className.equals(that.className)) return false;
+
 
         return true;
     }
 
     @Override
     public int hashCode() {
-        int result = klass.hashCode();
+        int result = className.hashCode();
         result = 31 * result + group.hashCode();
         result = 31 * result + version.hashCode();
         return result;

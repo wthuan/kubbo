@@ -3,13 +3,10 @@ package com.ifeng.kubbo.remote.akka;
 import akka.actor.ActorSystem;
 import com.ifeng.TestService;
 import com.ifeng.TestServiceImpl;
-import com.ifeng.kubbo.remote.Reference;
+import com.ifeng.kubbo.remote.Ref;
 import com.typesafe.config.ConfigFactory;
 import junit.framework.TestCase;
 import org.junit.Test;
-
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
 /**
  * <title>ReferenceInBoxTest</title>
@@ -19,7 +16,7 @@ import java.util.concurrent.Executors;
  * @author zhuwei
  *         14-9-5
  */
-public class ReferenceInBoxTest extends TestCase {
+public class RefInBoxTest extends TestCase {
 
 
     private ProviderContainer startProvider(){
@@ -31,30 +28,21 @@ public class ReferenceInBoxTest extends TestCase {
         return container;
     }
 
-    private Reference startReference() {
-        ReferenceInbox reference = ReferenceInbox.get("akka.tcp://kubbo@127.0.0.1:1111", 2222);
+    private Ref startReference() {
+        RefInbox reference = RefInbox.get("akka.tcp://kubbo@127.0.0.1:1111", 2222);
         return reference;
     }
     @Test
     public void testGetRef() throws Exception {
         ProviderContainer container = startProvider();
         Thread.sleep(3000);
-        Reference reference = startReference();
-        System.out.println("waiting for register");
-        Thread.sleep(10000);
+        Ref reference = startReference();
         TestService ref = reference.getRef(TestService.class, null, null);
-        ExecutorService executor = Executors.newFixedThreadPool(3);
-        for (int i = 0; i < 100; i++) {
-            executor.execute(() -> {
-                try {
-                    ref.testReturnInt(2000);
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-            });
+        System.out.println("waiting...");
+        for(;;){
+            ref.testVoid(1000);
+            Thread.sleep(1000);
         }
-
-        Thread.sleep(10000000);
 
     }
 }

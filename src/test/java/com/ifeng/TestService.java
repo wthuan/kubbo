@@ -13,4 +13,7 @@ public interface TestService {
 
     public Future testReturnFuture(long sleep)throws Exception;
 
+
+    public int testReturnIntWithParam(int param);
+
 }

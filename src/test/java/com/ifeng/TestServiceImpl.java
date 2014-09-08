@@ -5,6 +5,8 @@ import akka.actor.TypedActor;
 import akka.dispatch.Futures;
 import scala.concurrent.Future;
 
+import java.util.concurrent.atomic.AtomicInteger;
+
 /**
  * <title>TestImpl</title>
  * <p></p>
@@ -15,6 +17,8 @@ import scala.concurrent.Future;
  */
 public class TestServiceImpl implements TestService,TypedActor.Receiver {
 
+    private static AtomicInteger counter = new AtomicInteger(0);
+    private int id = counter.getAndIncrement();
     @Override
     public void testVoid(long sleep) throws Exception {
         System.out.println(Thread.currentThread().getName()+ " execute");
@@ -43,6 +47,13 @@ public class TestServiceImpl implements TestService,TypedActor.Receiver {
         }
         return Futures.successful(1);
     }
+
+    @Override
+    public int testReturnIntWithParam(int param) {
+        System.out.println(Thread.currentThread().getName()+"[id="+this.id+"] execute "+param);
+        return param;
+    }
+
 
     @Override
     public void onReceive(Object message, ActorRef sender) {

@@ -31,13 +31,13 @@ public class ProviderListenerActor extends UntypedActor{
 
     @Override
     public void preStart() throws Exception {
-
-        cluster.subscribe(getSelf(), ClusterEvent.MemberUp.class,
-                ClusterEvent.MemberRemoved.class);
+        logger.info("ProviderListener actor started");
+        cluster.subscribe(getSelf(), ClusterEvent.MemberUp.class);
     }
 
     @Override
     public void postStop() throws Exception {
+        logger.info("ProviderListener actor stopped !!!");
         cluster.unsubscribe(getSelf());
     }
 
@@ -55,8 +55,8 @@ public class ProviderListenerActor extends UntypedActor{
             if (isAliveConsumer(memberUp.member())) {
                 registerConsumer(memberUp.member());
             }
-        }else if(message.equals(Protocol.SHAKE_HANDS_ALL)) {
-            mediator.forward(new DistributedPubSubMediator.SendToAll(CONSUMER_ACTOR_PATH,Protocol.SHAKE_HANDS_ALL),getContext());
+        }else if(message.equals(Protocol.SHAKE_HAND)) {
+            mediator.forward(new DistributedPubSubMediator.SendToAll(CONSUMER_ACTOR_PATH,Protocol.SHAKE_HAND),getContext());
         }else{
             logger.warning("UnKnown message {}",message);
             unhandled(message);
@@ -64,11 +64,12 @@ public class ProviderListenerActor extends UntypedActor{
     }
 
     private void registerConsumer(Member member) {
-        logger.info("sender register consumer command to {}", member.address());
+        logger.info("sending register msg to {}", member.address());
         List<ActorRef> refs = container.list();
         //将provider 中的 actorRef 注册到consumer
         for(ActorRef ref: refs){
-            getContext().actorSelection(member.address() + CONSUMER_ACTOR_PATH).tell(Protocol.SHAKE_HANDS_ALL,ref);
+            logger.info("shake hand to {}|provider={}",member.address(),ref.toString());
+            getContext().actorSelection(member.address() + CONSUMER_ACTOR_PATH).tell(Protocol.SHAKE_HAND, ref);
         }
     }
 

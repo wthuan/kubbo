@@ -5,7 +5,7 @@ public class Protocol {
 
 
 
-    public static final String SHAKE_HANDS_ALL = "shake-hands-all";
+    public static final String SHAKE_HAND = "shake-hand";
 
 
 }

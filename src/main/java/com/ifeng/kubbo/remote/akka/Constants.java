@@ -22,7 +22,7 @@ public abstract class Constants {
     public static final String CONSUMER_ROLE = "consumer";
 
 
-    public static final String PROVIDER_ACTOR = "provider";
+//    public static final String PROVIDER_ACTOR = "provider";
 
 //    public static final String PROVIDER_ACTOR_PATH = "/user/provider";
 
@@ -36,4 +36,10 @@ public abstract class Constants {
     public static final int TYPED_ACTOR_NUM = CPU_CORE;
 
 
+    public static final long WAIT_PROVIDER_REGISTER_TIME =5000;
+
+    public static final long WAIT_ADD_ROUTEE_TIME = 3000;
+
+
+    public static final int PROVIDER_TOTAL_INSTANCE = 64;
 }

@@ -31,9 +31,9 @@ public class ProviderContainer implements ProviderLifeCycle {
 
     private final int typedActorNum;
 
-    private final ConcurrentMap<ProviderConfig, ProviderMetadata> metadatas = new ConcurrentHashMap<>();
+    private final ConcurrentMap<ProviderConfig, ProviderMetadata> metadataMap = new ConcurrentHashMap<>();
 
-    private ActorRef providerListener;
+//    private ActorRef providerListener;
 
     public ProviderContainer(ActorSystem system, int typedActorNum) {
         Objects.requireNonNull(system, "actorSystem required non null");
@@ -43,7 +43,7 @@ public class ProviderContainer implements ProviderLifeCycle {
         this.typedActorNum = typedActorNum > 0 ? typedActorNum : TYPED_ACTOR_NUM;
         this.logger = Logging.getLogger(system, this);
 
-        this.providerListener = system.actorOf(ProviderListenerActor.props(this));
+//        this.providerListener = system.actorOf(ProviderListenerActor.props(this));
     }
 
 
@@ -70,8 +70,8 @@ public class ProviderContainer implements ProviderLifeCycle {
         ProviderConfig config = new ProviderConfig(clazz, implement, group, version);
 
         //getRef from cache
-        ProviderMetadata metadata = metadatas.get(config);
-        if (metadatas.containsKey(config)) {
+        ProviderMetadata metadata = metadataMap.get(config);
+        if (metadata!=null) {
             if (logger.isInfoEnabled()) {
                 logger.info("provider already start|path={}", config.toPath());
             }
@@ -80,8 +80,8 @@ public class ProviderContainer implements ProviderLifeCycle {
 
         synchronized (clazz){
 
-            if(metadatas.containsKey(config)) {
-                return (T) metadata.getRouterProxy();
+            if(metadataMap.containsKey(config)) {
+                return (T) metadataMap.get(config).getRouterProxy();
             }
             //actual start
             List<T> proxyList = new ArrayList<>(typedActorNum);
@@ -96,76 +96,105 @@ public class ProviderContainer implements ProviderLifeCycle {
                 routeePaths.add(actorRef.path().toStringWithoutAddress());
             }
 
+
             RoundRobinGroup roundRobinGroup = new RoundRobinGroup(routeePaths);
             //akka actor name is unique
             ActorRef router = system.actorOf(roundRobinGroup.props(), config.toPath());
             T routerProxy = typed.typedActorOf(new TypedProps<>(clazz), router);
-            metadata = new ProviderMetadata<>(config, Lists.newCopyOnWriteArrayList(proxyList), Lists.newCopyOnWriteArrayList(actorRefList), router, routerProxy);
-            metadatas.put(config, metadata);
-            providerListener.tell(Protocol.SHAKE_HANDS_ALL,router);
+
+
+            metadata = new ProviderMetadata<T>(config, router, routerProxy);
+
+            metadataMap.put(config, metadata);
+
+
+//            //tell listener to notify all consumer
+//            providerListener.tell(Protocol.SHAKE_HAND,router);
+
+
             logger.info("start provider success|path={}", config);
             return routerProxy;
         }
     }
 
+
+
     @Override
     public void stop(Class<?> clazz, String group, String version) {
-        ProviderConfig config = new ProviderConfig(clazz,null,group,version);
+        ProviderConfig config = new ProviderConfig(clazz,group,version);
         ProviderMetadata metadata = check(config);
 
         metadata.getRouter().tell(new Broadcast(PoisonPill.getInstance()), null);
         logger.info("stop provider success|path={}", config.toPath());
-        metadatas.remove(config);
+        metadataMap.remove(config);
     }
+
+
 
 
     @Override
     public <T> T increaseActor(Class<T> clazz,String group,String version) {
-        ProviderConfig config = new ProviderConfig(clazz, null, group, version);
+        ProviderConfig config = new ProviderConfig(clazz, group, version);
         ProviderMetadata metadata = check(config);
         T newProxy = typed.typedActorOf(new TypedProps<>(clazz, () -> (T)metadata.getConfig().getImplement()));
         ActorRef newActorRef = typed.getActorRefFor(newProxy);
 
         //send add route msg
-        Routee incresed = new ActorRefRoutee(newActorRef);
-        metadata.getRouter().tell(new AddRoutee(incresed), null);
-        metadata.getProxyList().add(newProxy);
-        metadata.getActorRefList().add(newActorRef);
-        metadata.getIncresedActors().add(incresed);
+        Routee increseRoutee = new ActorRefRoutee(newActorRef);
+
+        //send addRoutee msg to router
+        metadata.getRouter().tell(new AddRoutee(increseRoutee), null);
+
+
+        metadata.getIncresedRoutee().add(increseRoutee);
+
         logger.info("increase actor success|path={}", config.toPath());
+
         return (T)metadata.getRouterProxy();
 
     }
 
     @Override
     public <T> T decreaseActor(Class<T> clazz, String group, String version) {
-        ProviderConfig config = new ProviderConfig(clazz, null, group, version);
+        ProviderConfig config = new ProviderConfig(clazz, group, version);
         ProviderMetadata metadata = check(config);
-        if (metadata.getIncresedActors().size() == 0) {
+
+        if (metadata.getIncresedRoutee().size() == 0) {
             logger.error("provider has no increased actor,not allowed decrease|path={}", config.toPath());
-            return null;
+            return (T)metadata.getRouterProxy();
         }
-        Routee removed = (Routee)metadata.getIncresedActors().remove(ThreadLocalRandom.current().nextInt(metadata.getIncresedActors().size()));
+        Routee removed = (Routee)metadata.getIncresedRoutee().remove(
+                ThreadLocalRandom.current().nextInt(
+                        metadata.getIncresedRoutee()
+                                .size()));
+
+        //router remove it,but it not stopped
         metadata.getRouter().tell(new RemoveRoutee(removed),null);
+
+        //stop routee
+        removed.send(PoisonPill.getInstance(),null);
+
         logger.info("decrease actor success|path={}",config.toPath());
         return (T) metadata.getRouterProxy();
 
 
     }
 
+
+
     @Override
     public List<ActorRef> list() {
         List<ActorRef> refs = Lists.newArrayList();
-        refs.addAll(metadatas.values().stream().map(ProviderMetadata::getRouter).collect(Collectors.toList()));
+        refs.addAll(metadataMap.values().stream().map(ProviderMetadata::getRouter).collect(Collectors.toList()));
 
         return refs;
     }
 
 
     private <T> ProviderMetadata check(ProviderConfig config) {
-        ProviderMetadata metadata = metadatas.get(config);
+        ProviderMetadata metadata = metadataMap.get(config);
         if (metadata == null) {
-            throw new KubboException("provider not found|clazz=" + config.getKlass() +
+            throw new KubboException("provider not found|clazz=" + config.getClassName() +
                     ",group=" + config.getGroup() +
                     ",version=" + config.getVersion());
         }
@@ -175,20 +204,14 @@ public class ProviderContainer implements ProviderLifeCycle {
 
     public static class ProviderMetadata<T>{
         private final ProviderConfig config;
-        private final List<T> proxyList;
-        private final List<ActorRef> actorRefList;
 
         private final ActorRef router;
         private final T routerProxy;
-        private final List<Routee> incresedActors = Lists.newCopyOnWriteArrayList();
+        private final List<Routee> incresedRoutee = Lists.newCopyOnWriteArrayList();
         public ProviderMetadata(ProviderConfig config,
-                                List<T> proxyList,
-                                List<ActorRef> actorRefList,
                                 ActorRef router,
                                 T routerProxy){
             this.config = config;
-            this.proxyList = proxyList;
-            this.actorRefList = actorRefList;
             this.router = router;
             this.routerProxy = routerProxy;
         }
@@ -198,13 +221,6 @@ public class ProviderContainer implements ProviderLifeCycle {
             return config;
         }
 
-        public List<T> getProxyList() {
-            return proxyList;
-        }
-
-        public List<ActorRef> getActorRefList() {
-            return actorRefList;
-        }
 
         public ActorRef getRouter() {
             return router;
@@ -214,8 +230,8 @@ public class ProviderContainer implements ProviderLifeCycle {
             return routerProxy;
         }
 
-        public List<Routee> getIncresedActors() {
-            return incresedActors;
+        public List<Routee> getIncresedRoutee() {
+            return incresedRoutee;
         }
     }
 
