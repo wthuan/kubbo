@@ -22,6 +22,8 @@ public abstract class Constants {
     public static final String CONSUMER_ROLE = "consumer";
 
 
+    public static final String SEED_NODE_ROLE = "seed-nodes";
+
 //    public static final String PROVIDER_ACTOR = "provider";
 
 //    public static final String PROVIDER_ACTOR_PATH = "/user/provider";
