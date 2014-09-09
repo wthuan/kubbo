@@ -1,9 +1,5 @@
 package com.ifeng.kubbo.remote;
 
-import akka.actor.ActorRef;
-
-import java.util.List;
-
 /**
  * Created by jiangyou on 14-9-4.
  */
@@ -52,7 +48,5 @@ public interface ProviderLifeCycle {
      */
     public <T> T decreaseActor(Class<T> clazz,String group,String version);
 
-
-    public List<ActorRef> list();
 
 }

@@ -8,6 +8,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.ifeng.kubbo.remote.Ref;
 import com.typesafe.config.ConfigFactory;
+import scala.concurrent.ExecutionContext;
 
 import java.util.List;
 import java.util.concurrent.ConcurrentMap;
@@ -76,4 +77,10 @@ public class Reference implements Ref {
 
         return (T)refMap.get(config);
     }
+
+    @Override
+    public ExecutionContext context() {
+        return system.dispatcher();
+    }
+
 }

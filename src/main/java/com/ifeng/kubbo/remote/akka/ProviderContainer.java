@@ -14,7 +14,6 @@ import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ThreadLocalRandom;
-import java.util.stream.Collectors;
 
 import static com.ifeng.kubbo.remote.akka.Constants.TYPED_ACTOR_NUM;
 
@@ -182,13 +181,6 @@ public class ProviderContainer implements ProviderLifeCycle {
 
 
 
-    @Override
-    public List<ActorRef> list() {
-        List<ActorRef> refs = Lists.newArrayList();
-        refs.addAll(metadataMap.values().stream().map(ProviderMetadata::getRouter).collect(Collectors.toList()));
-
-        return refs;
-    }
 
 
     private <T> ProviderMetadata check(ProviderConfig config) {
