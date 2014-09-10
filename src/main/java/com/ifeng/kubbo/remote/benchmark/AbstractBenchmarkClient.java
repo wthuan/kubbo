@@ -1,7 +1,8 @@
 package com.ifeng.kubbo.remote.benchmark;
 
-import java.io.BufferedWriter;
-import java.io.FileWriter;
+import com.google.common.collect.Maps;
+import org.apache.commons.lang3.ObjectUtils;
+
 import java.lang.reflect.InvocationTargetException;
 import java.text.SimpleDateFormat;
 import java.util.*;
@@ -33,7 +34,7 @@ public abstract class AbstractBenchmarkClient {
 
     private static long                   allErrorResponseTimeSum;
 
-    private static int                    runtime;
+//    private static int                    runtime;
 
     // < 0
     private static long                   below0sum;
@@ -70,19 +71,20 @@ public abstract class AbstractBenchmarkClient {
 
         final int concurrents = Integer.parseInt(properties.getProperty("concurrents"));
 
-        runtime = Integer.parseInt(properties.getProperty("runtime"));
-        long warmTime = Integer.parseInt(properties.getProperty("warmtime"));
-        final long endtime = System.nanoTime() / 1000L + runtime * 1000 * 1000L;
+//        runtime = Integer.parseInt(properties.getProperty("runtime"));
+//        long warmTime = Integer.parseInt(properties.getProperty("warmRequest"));
+        int requestNum = Integer.parseInt(properties.getProperty("requestNum"));
+//        final long endtime = System.nanoTime() / 1000L + runtime * 1000 * 1000L;
 
 
         Date currentDate = new Date();
         Calendar calendar = Calendar.getInstance();
         calendar.setTime(currentDate);
-        calendar.add(Calendar.SECOND, runtime);
+//        calendar.add(Calendar.SECOND, runtime);
         StringBuilder startInfo = new StringBuilder(dateFormat.format(currentDate));
         startInfo.append(" ready to start client benchmark,server is ");
         startInfo.append("concurrents is: ").append(concurrents);
-        startInfo.append("warm time is: ").append(warmTime);
+//        startInfo.append("warm time is: ").append(warmTime);
         startInfo.append(" s,the benchmark will end at:").append(dateFormat.format(calendar.getTime()));
         startInfo.append("\r\n----------------custom config---------\r\n");
         for (Map.Entry<Object, Object> entry : properties.entrySet()) {
@@ -94,10 +96,9 @@ public abstract class AbstractBenchmarkClient {
         CountDownLatch latch = new CountDownLatch(concurrents);
         List<ClientRunnable> runnables = new ArrayList<ClientRunnable>();
         // benchmark start after thirty seconds,let java app warm up
-        long beginTime = System.nanoTime() / 1000L + warmTime * 1000 * 1000L;
+//        long beginTime = System.nanoTime() / 1000L;
         for (int i = 0; i < concurrents; i++) {
-            ClientRunnable runnable = getClientRunnable(barrier, latch,
-                    beginTime, endtime);
+            ClientRunnable runnable = getClientRunnable(barrier, latch,requestNum);
             runnables.add(runnable);
         }
 
@@ -109,60 +110,96 @@ public abstract class AbstractBenchmarkClient {
         // key: runtime second range value: Long[2] array Long[0]: execute count Long[1]: response time sum
         Map<String, Long[]> times = new HashMap<String, Long[]>();
         Map<String, Long[]> errorTimes = new HashMap<String, Long[]>();
+
+        Map<Integer,Long> tps_total = Maps.newHashMap();
+        Map<Integer,Long> responseTimes_total= Maps.newHashMap();
+        Map<Integer,Long> errorTPS_total= Maps.newHashMap();
+        Map<Integer,Long> errorResponseTimes_total= Maps.newHashMap();
+
         for (ClientRunnable runnable : runnables) {
-            List<long[]> results = runnable.getResults();
-            long[] responseSpreads = results.get(0);
-            below0sum += responseSpreads[0];
-            above0sum += responseSpreads[1];
-            above1sum += responseSpreads[2];
-            above5sum += responseSpreads[3];
-            above10sum += responseSpreads[4];
-            above50sum += responseSpreads[5];
-            above100sum += responseSpreads[6];
-            above500sum += responseSpreads[7];
-            above1000sum += responseSpreads[8];
-            long[] tps = results.get(1);
-            long[] responseTimes = results.get(2);
-            long[] errorTPS = results.get(3);
-            long[] errorResponseTimes = results.get(4);
-            for (int i = 0; i < tps.length; i++) {
-                String key = String.valueOf(i);
-                if (times.containsKey(key)) {
-                    Long[] successInfos = times.get(key);
-                    Long[] errorInfos = errorTimes.get(key);
-                    successInfos[0] += tps[i];
-                    successInfos[1] += responseTimes[i];
-                    errorInfos[0] += errorTPS[i];
-                    errorInfos[1] += errorResponseTimes[i];
-                    times.put(key, successInfos);
-                    errorTimes.put(key, errorInfos);
-                } else {
-                    Long[] successInfos = new Long[2];
-                    successInfos[0] = tps[i];
-                    successInfos[1] = responseTimes[i];
-                    Long[] errorInfos = new Long[2];
-                    errorInfos[0] = errorTPS[i];
-                    errorInfos[1] = errorResponseTimes[i];
-                    times.put(key, successInfos);
-                    errorTimes.put(key, errorInfos);
-                }
+            Map<String,Object> result = runnable.getResults();
+            Map<Integer,Long> responseSpreads = (Map<Integer,Long>)result.get("responseSpreads");
+            below0sum += ObjectUtils.defaultIfNull(responseSpreads.get(0),0L);
+            above0sum += ObjectUtils.defaultIfNull(responseSpreads.get(1),0L);
+            above1sum += ObjectUtils.defaultIfNull(responseSpreads.get(2),0L);
+            above5sum += ObjectUtils.defaultIfNull(responseSpreads.get(3),0L);
+            above10sum += ObjectUtils.defaultIfNull(responseSpreads.get(4),0L);
+            above50sum += ObjectUtils.defaultIfNull(responseSpreads.get(5),0L);
+            above100sum += ObjectUtils.defaultIfNull(responseSpreads.get(6),0L);
+            above500sum += ObjectUtils.defaultIfNull(responseSpreads.get(7),0L);
+            above1000sum += ObjectUtils.defaultIfNull(responseSpreads.get(8),0L);
+            Map<Integer,Long> tps = (Map<Integer,Long>)result.get("tps");
+            Map<Integer,Long> responseTimes = (Map<Integer,Long>)result.get("responseTimes");
+            Map<Integer,Long> errorTPS = (Map<Integer,Long>)result.get("errorTPS");
+            Map<Integer,Long> errorResponseTimes = (Map<Integer,Long>)result.get("errorResponseTimes");
+            for(Integer key : tps.keySet()){
+                tps_total.put(key, ObjectUtils.defaultIfNull(tps_total.get(key),0L)+tps.get(key));
             }
+
+            for(Integer key : responseTimes.keySet()){
+                responseTimes_total.put(key,ObjectUtils.defaultIfNull(responseTimes_total.get(key),0L)+responseTimes.get(key));
+            }
+
+            for(Integer key : errorTPS.keySet()){
+                errorTPS_total.put(key,ObjectUtils.defaultIfNull(errorTPS_total.get(key),0L)+errorTPS.get(key));
+            }
+
+            for(Integer key : errorResponseTimes.keySet()){
+                errorResponseTimes_total.put(key,ObjectUtils.defaultIfNull(errorResponseTimes_total.get(key),0L)+errorResponseTimes.get(key));
+            }
+
+
+//            Long[] tps = results.get(1);
+//            Long[] responseTimes = results.get(2);
+//            Long[] errorTPS = results.get(3);
+//            Long[] errorResponseTimes = results.get(4);
+//            for (int i = 0; i < tps.length; i++) {
+//                String key = String.valueOf(i);
+//                if (times.containsKey(key)) {
+//                    Long[] successInfos = times.get(key);
+//                    Long[] errorInfos = errorTimes.get(key);
+//                    successInfos[0] += tps[i];
+//                    successInfos[1] += responseTimes[i];
+//                    errorInfos[0] += errorTPS[i];
+//                    errorInfos[1] += errorResponseTimes[i];
+//                    times.put(key, successInfos);
+//                    errorTimes.put(key, errorInfos);
+//                } else {
+//                    Long[] successInfos = new Long[2];
+//                    successInfos[0] = tps[i];
+//                    successInfos[1] = responseTimes[i];
+//                    Long[] errorInfos = new Long[2];
+//                    errorInfos[0] = errorTPS[i];
+//                    errorInfos[1] = errorResponseTimes[i];
+//                    times.put(key, successInfos);
+//                    errorTimes.put(key, errorInfos);
+//                }
+//            }
         }
 
         long ignoreRequest = 0;
         long ignoreErrorRequest = 0;
-        int maxTimeRange = runtime - 30;
+//        int maxTimeRange = runtime - 30;
         // ignore the last 10 second requests,so tps can count more accurate
-        for (int i = 0; i < 10; i++) {
-            Long[] values = times.remove(String.valueOf(maxTimeRange - i));
-            if (values != null) {
-                ignoreRequest += values[0];
+//        for (int i = 0; i < 10; i++) {
+//            Long[] values = times.remove(String.valueOf(maxTimeRange - i));
+//            if (values != null) {
+//                ignoreRequest += values[0];
+//            }
+//            Long[] errorValues = errorTimes.remove(String.valueOf(maxTimeRange - i));
+//            if (errorValues != null) {
+//                ignoreErrorRequest += errorValues[0];
+//            }
+//        }
+
+            allRequestSum = tps_total.values().stream().mapToLong(value -> value).sum();
+            allResponseTimeSum = responseTimes_total.values().stream().mapToLong(value->value).sum();
+            allErrorRequestSum = errorTPS_total.values().stream().mapToLong(value->value).sum();
+            allErrorResponseTimeSum = errorResponseTimes_total.values().stream().mapToLong(value->value).sum();
+
+            for(Integer key : errorTPS_total.keySet()){
+                tps_total.put(key,ObjectUtils.defaultIfNull(tps_total.get(key),0L)+errorTPS_total.get(key));
             }
-            Long[] errorValues = errorTimes.remove(String.valueOf(maxTimeRange - i));
-            if (errorValues != null) {
-                ignoreErrorRequest += errorValues[0];
-            }
-        }
 
         for (Map.Entry<String, Long[]> entry : times.entrySet()) {
             long successRequest = entry.getValue()[0];
@@ -185,27 +222,29 @@ public abstract class AbstractBenchmarkClient {
             }
         }
 
-        boolean isWriteResult = Boolean.parseBoolean(System.getProperty("write.statistics", "false"));
-        if (isWriteResult) {
-            BufferedWriter writer = new BufferedWriter(new FileWriter("benchmark.all.results"));
-            for (Map.Entry<String, Long[]> entry : times.entrySet()) {
-                writer.write(entry.getKey() + "," + entry.getValue()[0] + "," + entry.getValue()[1] + "\r\n");
-            }
-            writer.close();
-        }
+            maxTPS = Collections.max(tps_total.values());
+            minTPS = Collections.min(tps_total.values());
+////        boolean isWriteResult = Boolean.parseBoolean(System.getProperty("write.statistics", "false"));
+//        if (true) {
+////            BufferedWriter writer = new BufferedWriter(new FileWriter("benchmark.all.results"));
+//            for (Map.Entry<String, Long[]> entry : times.entrySet()) {
+//                System.out.println(entry.getKey() + "," + entry.getValue()[0] + "," + entry.getValue()[1]);
+//            }
+//
+//        }
 
         System.out.println("----------Benchmark Statistics--------------");
         System.out.println(" Concurrents: " + concurrents);
 //        System.out.println(" ClientNums: " + clientNums);
-        System.out.println(" Runtime: " + runtime + " seconds");
-        System.out.println(" Benchmark Time: " + times.keySet().size());
+//        System.out.println(" Runtime: " + runtime + " seconds");
+        System.out.println(" Benchmark Time: " + tps_total.keySet().size());
         long benchmarkRequest = allRequestSum + allErrorRequestSum;
         long allRequest = benchmarkRequest + ignoreRequest + ignoreErrorRequest;
         System.out.println(" Requests: " + allRequest + " Success: " + (allRequestSum + ignoreRequest) * 100
                 / allRequest + "% (" + (allRequestSum + ignoreRequest) + ") Error: "
                 + (allErrorRequestSum + ignoreErrorRequest) * 100 / allRequest + "% ("
                 + (allErrorRequestSum + ignoreErrorRequest) + ")");
-        System.out.println(" Avg TPS: " + benchmarkRequest / times.keySet().size() + " Max TPS: " + maxTPS
+        System.out.println(" Avg TPS: " + benchmarkRequest / tps_total.keySet().size() + " Max TPS: " + maxTPS
                 + " Min TPS: " + minTPS);
         System.out.println(" Avg RT: " + (allErrorResponseTimeSum + allResponseTimeSum) / benchmarkRequest / 1000f
                 + "ms");
@@ -222,8 +261,8 @@ public abstract class AbstractBenchmarkClient {
         System.exit(0);
     }
 
-    public abstract ClientRunnable getClientRunnable(CyclicBarrier barrier, CountDownLatch latch, long startTime,
-                                                     long endTime) throws IllegalArgumentException, SecurityException, InstantiationException, IllegalAccessException, InvocationTargetException, NoSuchMethodException, ClassNotFoundException;
+    public abstract ClientRunnable getClientRunnable(CyclicBarrier barrier, CountDownLatch latch,
+                                                     int requestNum) throws IllegalArgumentException, SecurityException, InstantiationException, IllegalAccessException, InvocationTargetException, NoSuchMethodException, ClassNotFoundException;
 
     protected void startRunnables(List<ClientRunnable> runnables) {
         for (int i = 0; i < runnables.size(); i++) {

@@ -15,12 +15,12 @@ import java.util.concurrent.CyclicBarrier;
 public class RpcBenchmarkClient extends AbstractBenchmarkClient{
 
     @Override
-    public ClientRunnable getClientRunnable(CyclicBarrier barrier, CountDownLatch latch, long startTime, long endTime) throws IllegalArgumentException, SecurityException, InstantiationException, IllegalAccessException, InvocationTargetException, NoSuchMethodException, ClassNotFoundException {
+    public ClientRunnable getClientRunnable(CyclicBarrier barrier, CountDownLatch latch,int requestNum) throws IllegalArgumentException, SecurityException, InstantiationException, IllegalAccessException, InvocationTargetException, NoSuchMethodException, ClassNotFoundException {
         String className = properties.getProperty("classname");
         Class[] parameterTypes = new Class[] { CyclicBarrier.class,
-                CountDownLatch.class, long.class, long.class };
-        Object[] parameters = new Object[] {barrier, latch, startTime,
-                endTime };
+                CountDownLatch.class, int.class };
+        Object[] parameters = new Object[] {barrier, latch,
+                requestNum};
         return (ClientRunnable) Class.forName(className).getConstructor(parameterTypes).newInstance(parameters);
     }
 

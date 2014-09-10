@@ -1,6 +1,5 @@
 package com.ifeng.kubbo.remote.benchmark.demo;
 
-import com.ifeng.kubbo.remote.Ref;
 import com.ifeng.kubbo.remote.akka.Reference;
 import com.ifeng.kubbo.remote.benchmark.AbstractClientRunnable;
 import scala.concurrent.Future;
@@ -19,23 +18,20 @@ import java.util.concurrent.CyclicBarrier;
 public class EchoClientRunnable extends AbstractClientRunnable {
 
 
-    private Ref ref = Reference.get();
+    private static Echo echo = Reference.get().getRef(Echo.class,null,null);
 
-    public EchoClientRunnable(CyclicBarrier barrier, CountDownLatch latch, long startTime, long endTime) {
-        super(barrier, latch, startTime, endTime);
+    public EchoClientRunnable(CyclicBarrier barrier, CountDownLatch latch, int requestNum) {
+        super(barrier, latch,requestNum);
     }
 
 
 
     private Object syncInvoke(){
-        Echo echo = ref.getRef(Echo.class, null, null);
         String ret = echo.syncEcho("aaaaa");
-        System.out.println(ret);
         return ret;
     }
 
     private Object asyncInvoke() {
-        Echo echo = ref.getRef(Echo.class, null, null);
         Future<String> future = echo.asyncEcho("aaaa");
         return future;
     }

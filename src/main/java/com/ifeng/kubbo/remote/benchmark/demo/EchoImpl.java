@@ -18,11 +18,13 @@ public class EchoImpl implements Echo{
 
     @Override
     public String syncEcho(String str) {
+
         return str;
     }
 
     @Override
     public Future<String> asyncEcho(String str) {
+
         return Futures.future(() -> str, context());
     }
 }

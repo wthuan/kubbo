@@ -70,6 +70,12 @@ public class Reference implements Ref {
                         new ClusterRouterGroupSettings(PROVIDER_TOTAL_INSTANCE,
                                 routees, true, PROVIDER_ROLE)).props());
                 Object proxy = typed.typedActorOf(new TypedProps<>(clazz),router);
+                //wait for register
+                try {
+                    Thread.sleep(3000);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
                 refMap.put(config,proxy);
             }
         }
