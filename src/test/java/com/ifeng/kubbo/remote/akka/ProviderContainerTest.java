@@ -30,7 +30,8 @@ public class ProviderContainerTest extends TestCase{
     @Override
     protected void setUp() throws Exception {
         this.system = ActorSystem.create();
-        this.factory = new ProviderContainer(system,4);
+        this.factory = new ProviderContainer(4);
+
     }
 
     @Test

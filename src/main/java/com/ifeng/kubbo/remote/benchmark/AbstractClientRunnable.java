@@ -2,12 +2,15 @@ package com.ifeng.kubbo.remote.benchmark;
 
 import akka.dispatch.OnComplete;
 import com.ifeng.kubbo.remote.Ref;
+import com.ifeng.kubbo.remote.akka.Context;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import scala.concurrent.Future;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Properties;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.CyclicBarrier;
 
@@ -46,7 +49,14 @@ public abstract class AbstractClientRunnable implements ClientRunnable {
 
     private Ref ref;
 
-    public AbstractClientRunnable(CyclicBarrier barrier, CountDownLatch latch, long startTime, long endTime){
+    protected  Properties properties ;
+    public AbstractClientRunnable(CyclicBarrier barrier, CountDownLatch latch, long startTime, long endTime) {
+        this.properties = new Properties();
+        try {
+            properties.load(Thread.currentThread().getContextClassLoader().getResourceAsStream("benchmark.properties"));
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
         this.barrier = barrier;
         this.latch = latch;
         this.startTime = startTime;
@@ -93,9 +103,10 @@ public abstract class AbstractClientRunnable implements ClientRunnable {
                     resultFuture.onComplete(new OnComplete() {
                         @Override
                         public void onComplete(Throwable failure, Object success) throws Throwable {
+
                            count(beginTime,failure,success);
                         }
-                    },ref.context());
+                    }, Context.context());
                 }else{
                     count(beginTime,null,result);
                 }

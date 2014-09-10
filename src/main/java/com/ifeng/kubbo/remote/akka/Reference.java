@@ -37,18 +37,17 @@ public class Reference implements Ref {
 
     private static Reference INSTANCE;
 
+    static{
+        ActorSystem system = ActorSystem.create(SYSTEM, ConfigFactory.parseString("akka.cluster.roles=[" + CONSUMER_ROLE + "]")
+                .withFallback(ConfigFactory.load()));
+
+        Reference reference = new Reference(system);
+        INSTANCE = reference;
+    }
 
 
-    public static Reference get(String seedNodes,int port){
-        if(INSTANCE  == null) {
-            ActorSystem system = ActorSystem.create(SYSTEM, ConfigFactory.parseString("akka.cluster.roles=[" + CONSUMER_ROLE + "]")
-                    .withFallback(ConfigFactory.parseString("akka.remote.netty.tcp.port=" + port)
-                            .withFallback(ConfigFactory.parseString("akka.cluster.seed-nodes=[\"" + seedNodes + "\"]")))
-                    .withFallback(ConfigFactory.load()));
 
-            Reference reference = new Reference(system);
-            INSTANCE = reference;
-        }
+    public static Reference get(){
         return INSTANCE;
     }
 
@@ -78,7 +77,6 @@ public class Reference implements Ref {
         return (T)refMap.get(config);
     }
 
-    @Override
     public ExecutionContext context() {
         return system.dispatcher();
     }

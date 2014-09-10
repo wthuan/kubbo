@@ -6,6 +6,7 @@ import akka.event.LoggingAdapter;
 import akka.routing.*;
 import com.google.common.collect.Lists;
 import com.ifeng.kubbo.remote.ProviderLifeCycle;
+import com.typesafe.config.ConfigFactory;
 import org.apache.commons.lang3.reflect.TypeUtils;
 
 import java.util.ArrayList;
@@ -15,6 +16,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ThreadLocalRandom;
 
+import static com.ifeng.kubbo.remote.akka.Constants.PROVIDER_ROLE;
 import static com.ifeng.kubbo.remote.akka.Constants.TYPED_ACTOR_NUM;
 
 
@@ -32,17 +34,20 @@ public class ProviderContainer implements ProviderLifeCycle {
 
     private final ConcurrentMap<ProviderConfig, ProviderMetadata> metadataMap = new ConcurrentHashMap<>();
 
-//    private ActorRef providerListener;
 
-    public ProviderContainer(ActorSystem system, int typedActorNum) {
-        Objects.requireNonNull(system, "actorSystem required non null");
+    public ProviderContainer() {
+        this(TYPED_ACTOR_NUM);
+    }
 
-        this.system = system;
+    public ProviderContainer(int typedActorNum) {
+
+        this.system = ActorSystem.create(Constants.SYSTEM,
+                ConfigFactory.parseString("akka.cluster.roles=[" + PROVIDER_ROLE + "]")
+                        .withFallback(ConfigFactory.load()));
         this.typed = TypedActor.get(system);
         this.typedActorNum = typedActorNum > 0 ? typedActorNum : TYPED_ACTOR_NUM;
         this.logger = Logging.getLogger(system, this);
 
-//        this.providerListener = system.actorOf(ProviderListenerActor.props(this));
     }
 
 

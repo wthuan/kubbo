@@ -68,33 +68,33 @@ public abstract class AbstractBenchmarkClient {
         this.properties = new Properties();
         this.properties.load(Thread.currentThread().getContextClassLoader().getResourceAsStream("benchmark.properties"));
 
-//        final String serverIP = properties.getProperty("serverip");
-//        final int serverPort = Integer.parseInt(properties.getProperty("serverport"));
         final int concurrents = Integer.parseInt(properties.getProperty("concurrents"));
-//        final int timeout = Integer.parseInt(properties.getProperty("timeout"));
-        runtime = Integer.parseInt(properties.getProperty("runtime"));
-        final long endtime = System.nanoTime() / 1000L + runtime * 1000 * 1000L;
-//        final int clientNums = Integer.parseInt(properties.getProperty("connectionnums"));
 
-        // Print start info
+        runtime = Integer.parseInt(properties.getProperty("runtime"));
+        long warmTime = Integer.parseInt(properties.getProperty("warmtime"));
+        final long endtime = System.nanoTime() / 1000L + runtime * 1000 * 1000L;
+
+
         Date currentDate = new Date();
         Calendar calendar = Calendar.getInstance();
         calendar.setTime(currentDate);
         calendar.add(Calendar.SECOND, runtime);
         StringBuilder startInfo = new StringBuilder(dateFormat.format(currentDate));
         startInfo.append(" ready to start client benchmark,server is ");
-//        startInfo.append(serverIP).append(":").append(serverPort);
         startInfo.append("concurrents is: ").append(concurrents);
-//        startInfo.append(",clientNums is: ").append(clientNums);
-//        startInfo.append(",timeout is:").append(timeout);
+        startInfo.append("warm time is: ").append(warmTime);
         startInfo.append(" s,the benchmark will end at:").append(dateFormat.format(calendar.getTime()));
+        startInfo.append("\r\n----------------custom config---------\r\n");
+        for (Map.Entry<Object, Object> entry : properties.entrySet()) {
+            startInfo.append(entry.getKey()).append("=").append(entry.getValue()).append("\r\n");
+        }
         System.out.println(startInfo.toString());
 
         CyclicBarrier barrier = new CyclicBarrier(concurrents);
         CountDownLatch latch = new CountDownLatch(concurrents);
         List<ClientRunnable> runnables = new ArrayList<ClientRunnable>();
         // benchmark start after thirty seconds,let java app warm up
-        long beginTime = System.nanoTime() / 1000L + 30 * 1000 * 1000L;
+        long beginTime = System.nanoTime() / 1000L + warmTime * 1000 * 1000L;
         for (int i = 0; i < concurrents; i++) {
             ClientRunnable runnable = getClientRunnable(barrier, latch,
                     beginTime, endtime);
