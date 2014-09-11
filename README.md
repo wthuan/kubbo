@@ -1,4 +1,0 @@
-kubbo
-=====
-
-akka+rpc

@@ -6,10 +6,12 @@
 
     <groupId>com.ifeng</groupId>
     <artifactId>kubbo</artifactId>
+    <packaging>pom</packaging>
     <version>1.0-SNAPSHOT</version>
-
-
-
+    <modules>
+        <module>../kubbo-benchmark</module>
+        <module>../kubbo-core</module>
+    </modules>
 
 
     <dependencies>
