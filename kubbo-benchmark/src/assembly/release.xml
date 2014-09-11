@@ -1,0 +1,29 @@
+<assembly>
+    <id>dist</id>
+    <formats>
+        <format>tar.gz</format>
+    </formats>
+    <includeBaseDirectory>true</includeBaseDirectory>
+    <baseDirectory>kubbo-benchmark</baseDirectory>
+    <fileSets>
+        <fileSet>
+            <directory>src/assembly/release/conf</directory>
+            <outputDirectory>conf</outputDirectory>
+        </fileSet>
+        <fileSet>
+            <directory>src/assembly/release/bin</directory>
+            <outputDirectory>bin</outputDirectory>
+            <fileMode>777</fileMode>
+        </fileSet>
+    </fileSets>
+    <dependencySets>
+        <dependencySet>
+            <outputDirectory>lib</outputDirectory>
+            <useProjectArtifact>false</useProjectArtifact>
+            <useProjectAttachments>true</useProjectAttachments>
+            <excludes>
+                <exclude>*:sources</exclude>
+            </excludes>
+        </dependencySet>
+    </dependencySets>
+</assembly>
