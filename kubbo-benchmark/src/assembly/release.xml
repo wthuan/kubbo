@@ -7,11 +7,11 @@
     <baseDirectory>kubbo-benchmark</baseDirectory>
     <fileSets>
         <fileSet>
-            <directory>src/assembly/release/conf</directory>
+            <directory>src/assembly/conf</directory>
             <outputDirectory>conf</outputDirectory>
         </fileSet>
         <fileSet>
-            <directory>src/assembly/release/bin</directory>
+            <directory>src/assembly/bin</directory>
             <outputDirectory>bin</outputDirectory>
             <fileMode>777</fileMode>
         </fileSet>

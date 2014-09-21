@@ -1,5 +1,6 @@
 package com.ifeng.kubbo.benchmark.demo;
 
+
 import scala.concurrent.Future;
 
 /**
